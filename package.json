@@ -1,0 +1,14 @@
+{
+  "name": "minecraft-bot-dashboard",
+  "version": "1.0.0",
+  "description": "Bot for Aternos",
+  "main": "index.js",
+  "scripts": {
+    "start": "node index.js"
+  },
+  "dependencies": {
+    "mineflayer": "^4.20.0",
+    "express": "^4.18.2",
+    "socket.io": "^4.7.2"
+  }
+}
