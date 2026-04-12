@@ -1,0 +1,43 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>MSI Bot Dashboard</title>
+    <script src="https://cdn.socket.io/4.7.2/socket.io.min.js"></script>
+    <style>
+        body { background: #1a1a1a; color: #eee; font-family: 'Segoe UI', sans-serif; display: flex; justify-content: center; padding: 40px; }
+        .card { width: 100%; max-width: 600px; background: #252525; padding: 30px; border-radius: 15px; box-shadow: 0 10px 30px rgba(0,0,0,0.5); border: 1px solid #333; }
+        h1 { color: #00ff88; margin-top: 0; }
+        .status-box { background: #111; padding: 10px; border-radius: 8px; margin-bottom: 20px; }
+        #status { font-weight: bold; color: #00ff88; }
+        #chat { height: 300px; overflow-y: auto; background: #000; color: #00d4ff; text-align: left; padding: 15px; border-radius: 8px; font-family: 'Consolas', monospace; font-size: 14px; border: 1px solid #444; }
+        .msg { margin-bottom: 5px; border-bottom: 1px solid #222; padding-bottom: 2px; }
+        .ip-text { color: #888; font-size: 0.9em; }
+    </style>
+</head>
+<body>
+    <div class="card">
+        <h1>Bot Controller</h1>
+        <div class="status-box">
+            Status: <span id="status">Connecting...</span><br>
+            <span class="ip-text">IdontbelieveTheFathe.aternos.me</span>
+        </div>
+        <div id="chat">--- System Initialized ---<br></div>
+    </div>
+
+    <script>
+        const socket = io();
+        const statusEl = document.getElementById('status');
+        const chatEl = document.getElementById('chat');
+
+        socket.on('status', (s) => { 
+            statusEl.innerText = s;
+            statusEl.style.color = (s === 'Online') ? '#00ff88' : '#ffcc00';
+        });
+        
+        socket.on('minecraftChat', (data) => {
+            chatEl.innerHTML += `<div class="msg"><strong>${data.user}:</strong> ${data.msg}</div>`;
+            chatEl.scrollTop = chatEl.scrollHeight;
+        });
+    </script>
+</body>
+</html>
