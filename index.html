@@ -34,9 +34,11 @@
 
         // 1. Listen for new URLs from your MSI laptop
         channel.subscribe('update', (message) => {
-            console.log("New URL Received: " + message.data);
-            currentStreamUrl = message.data + "/video_feed";
-            statusDiv.innerText = "CONNECTED: " + message.data;
+            // Force https just in case the Python script sent http
+            let secureUrl = message.data.replace("http://", "https://");
+            currentStreamUrl = secureUrl + "/video_feed";
+            
+            statusDiv.innerText = "CONNECTED: " + secureUrl;
             statusDiv.style.color = "#00ff41";
             requestAnimationFrame(updateFrame);
         });
