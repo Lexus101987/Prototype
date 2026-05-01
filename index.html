@@ -31,7 +31,6 @@
         const ctx = canvas.getContext('2d');
         const statusDiv = document.getElementById('status');
         const img = new Image();
-        let currentStreamUrl = "";
 
         // Initialize Ably immediately
         const ably = new Ably.Realtime('g3LxQQ.VN4WNQ:AykX5Knk-nJiwR9tTvFamKdp8XDMtleNrD7JN7L1C2M');
@@ -63,41 +62,39 @@
             }
         }
 
-        async function updateFrame() {
-    if (!currentStreamUrl) return;
+        let currentStreamUrl = "";
 
-    try {
-        // This is the 'API' method mentioned in your image
-        const response = await fetch(currentStreamUrl + "?t=" + new Date().getTime(), {
-            headers: {
-                'x-pinggy-no-screen': 'true' // The header from your image!
-            }
-        });
+        function updateFrame() {
+            if (!currentStreamUrl) return;
 
-        if (response.ok) {
-            const blob = await response.blob();
-            const url = URL.createObjectURL(blob);
-            img.src = url;
+            // Use a direct <img> update. This is a "Simple Request"
+            // that the browser doesn't block with Preflight checks.
+            const streamSrc = currentStreamUrl + "?t=" + new Date().getTime();
             
-            // Clean up memory after the image loads
-            img.onload = () => {
+            const img = new Image();
+            img.onload = function() {
+                canvas.width = img.width;
+                canvas.height = img.height;
                 ctx.drawImage(img, 0, 0);
-                URL.revokeObjectURL(url);
-                setTimeout(updateFrame, 33); // 30 FPS
+                setTimeout(updateFrame, 33); // Heartbeat
             };
-        }
-    } catch (e) {
-        log("Connection error. Retrying...");
-        setTimeout(updateFrame, 1000);
-    }
-}
+            
+            img.onerror = function() {
+                // If it fails, the Pinggy "Caution" page is likely blocking it.
+                log("Frame failed. Please visit the URL in a new tab once.");
+                setTimeout(updateFrame, 1000);
+            };
 
-        // 3. SETUP THE ABLY SUBSCRIPTION
-        channel.subscribe('update', message => {
-            log("Received new URL: " + message.data);
-            currentStreamUrl = message.data;
-            statusDiv.textContent = "Connected to: " + currentStreamUrl;
-            updateFrame(); // Start fetching frames immediately
+            img.src = streamSrc;
+        }
+
+        channel.subscribe('update', (message) => {
+            let secureUrl = message.data.replace("http://", "https://");
+            currentStreamUrl = secureUrl + "/video_feed";
+            statusDiv.innerText = "CONNECTED: " + secureUrl;
+            statusDiv.style.color = "#00ff41";
+            log("New Handshake Received");
+            updateFrame();
         });
     </script>
 </body>
