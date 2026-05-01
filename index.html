@@ -25,99 +25,71 @@
     </div>
 
     <script>
+        // 1. SETUP EVERYTHING FIRST
         const logDiv = document.getElementById('debug-log');
+        const canvas = document.getElementById('stream-canvas');
+        const ctx = canvas.getContext('2d');
+        const statusDiv = document.getElementById('status');
+        const img = new Image();
+        let currentStreamUrl = "";
+
+        // Initialize Ably immediately
+        const ably = new Ably.Realtime('g3LxQQ.VN4WNQ:AykX5Knk-nJiwR9tTvFamKdp8XDMtleNrD7JN7L1C2M');
+        const channel = ably.channels.get('tunnel-handshake');
+
         function log(msg) {
             logDiv.innerHTML += `<div>> ${msg}</div>`;
             logDiv.scrollTop = logDiv.scrollHeight;
         }
 
+        // 2. DEFINE THE FUNCTIONS
         async function debugStream() {
             if (!currentStreamUrl) return;
-            
-            log("Testing connection to: " + currentStreamUrl);
-            
+            log("Testing connection...");
             try {
                 const response = await fetch(currentStreamUrl + "?t=" + new Date().getTime(), {
                     headers: { 'x-pinggy-no-screen': 'true' }
                 });
-
-                log("Status Code: " + response.status);
-                log("Content-Type: " + response.headers.get('content-type'));
+                log("Status: " + response.status);
+                log("Type: " + response.headers.get('content-type'));
 
                 if (response.headers.get('content-type').includes('text/html')) {
-                    log("!! ALERT: Received a WEBSITE (Caution Page) instead of a PHOTO.");
+                    log("!! BLOCKED: Still getting the Pinggy Warning Page.");
                 } else {
-                    log("Success: Received IMAGE data.");
-                    // Try to draw it once
-                    const blob = await response.blob();
-                    img.src = URL.createObjectURL(blob);
+                    log("SUCCESS: Image data received.");
                 }
             } catch (e) {
                 log("ERROR: " + e.message);
             }
         }
 
-        // Trigger debug when connected
-        channel.subscribe('update', (message) => {
-            let secureUrl = message.data.replace("http://", "https://");
-            currentStreamUrl = secureUrl + "/video_feed";
-            statusDiv.innerText = "CONNECTED: " + secureUrl;
-            debugStream(); // Run the debug test immediately
-        });
-    </script>
-
-    <script>
-        // Use your API Key (already in your Python script)
-        const ably = new Ably.Realtime('g3LxQQ.VN4WNQ:AykX5Knk-nJiwR9tTvFamKdp8XDMtleNrD7JN7L1C2M');
-        const channel = ably.channels.get('tunnel-handshake');
-        
-        const canvas = document.getElementById('stream-canvas');
-        const ctx = canvas.getContext('2d');
-        const statusDiv = document.getElementById('status');
-        const img = new Image();
-        
-        let currentStreamUrl = "";
-
-        // 1. Listen for new URLs from your MSI laptop
-        channel.subscribe('update', (message) => {
-            // Force https just in case the Python script sent http
-            let secureUrl = message.data.replace("http://", "https://");
-            currentStreamUrl = secureUrl + "/video_feed";
-            
-            statusDiv.innerText = "CONNECTED: " + secureUrl;
-            statusDiv.style.color = "#00ff41";
-            requestAnimationFrame(updateFrame);
-        });
-
-        // 2. The Frame-Fetcher (No-Queue Logic)
         function updateFrame() {
             if (!currentStreamUrl) return;
-
-            // Use a unique cache-buster and the Pinggy bypass parameter
-            const streamSrc = currentStreamUrl + "?t=" + new Date().getTime();
-            
-            img.src = streamSrc;
-            
-            // Forced draw logic
-            if (img.complete || img.naturalWidth > 0) {
-                canvas.width = img.width;
-                canvas.height = img.height;
-                ctx.drawImage(img, 0, 0);
-            }
-            requestAnimationFrame(updateFrame);
+            img.src = currentStreamUrl + "?t=" + new Date().getTime();
         }
 
+        // 3. SET UP THE LISTENERS
         img.onload = function() {
             canvas.width = img.width;
             canvas.height = img.height;
             ctx.drawImage(img, 0, 0);
-            setTimeout(updateFrame, 33); // Aims for ~30 FPS
+            setTimeout(updateFrame, 33); 
         };
 
         img.onerror = function() {
-            console.log("Frame failed, retrying...");
+            // This confirms the browser is blocking the link
             setTimeout(updateFrame, 500);
         };
+
+        channel.subscribe('update', (message) => {
+            let secureUrl = message.data.replace("http://", "https://");
+            currentStreamUrl = secureUrl + "/video_feed";
+            statusDiv.innerText = "CONNECTED: " + secureUrl;
+            statusDiv.style.color = "#00ff41";
+            log("New Handshake Received");
+            debugStream(); 
+            updateFrame();
+        });
     </script>
 </body>
 </html>
