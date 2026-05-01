@@ -13,12 +13,58 @@
     </style>
 </head>
 <body>
-    <h3>SYSTEM MONITOR v1.1</h3>
+    <h3>SYSTEM MONITOR v1.2</h3>
     <div id="status">Waiting for handshake from the computer...</div>
     
     <canvas id="stream-canvas"></canvas>
 
     <div class="info">Auto-syncing via Ably Realtime</div>
+
+    <div id="debug-log" style="background:#000; color:#0f0; font-size:10px; text-align:left; height:100px; overflow:y-scroll; border:1px solid #333; margin-top:10px;">
+    System Logs Ready...
+    </div>
+
+    <script>
+        const logDiv = document.getElementById('debug-log');
+        function log(msg) {
+            logDiv.innerHTML += `<div>> ${msg}</div>`;
+            logDiv.scrollTop = logDiv.scrollHeight;
+        }
+
+        async function debugStream() {
+            if (!currentStreamUrl) return;
+            
+            log("Testing connection to: " + currentStreamUrl);
+            
+            try {
+                const response = await fetch(currentStreamUrl + "?t=" + new Date().getTime(), {
+                    headers: { 'x-pinggy-no-screen': 'true' }
+                });
+
+                log("Status Code: " + response.status);
+                log("Content-Type: " + response.headers.get('content-type'));
+
+                if (response.headers.get('content-type').includes('text/html')) {
+                    log("!! ALERT: Received a WEBSITE (Caution Page) instead of a PHOTO.");
+                } else {
+                    log("Success: Received IMAGE data.");
+                    // Try to draw it once
+                    const blob = await response.blob();
+                    img.src = URL.createObjectURL(blob);
+                }
+            } catch (e) {
+                log("ERROR: " + e.message);
+            }
+        }
+
+        // Trigger debug when connected
+        channel.subscribe('update', (message) => {
+            let secureUrl = message.data.replace("http://", "https://");
+            currentStreamUrl = secureUrl + "/video_feed";
+            statusDiv.innerText = "CONNECTED: " + secureUrl;
+            debugStream(); // Run the debug test immediately
+        });
+    </script>
 
     <script>
         // Use your API Key (already in your Python script)
