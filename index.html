@@ -73,13 +73,12 @@
             canvas.width = img.width;
             canvas.height = img.height;
             ctx.drawImage(img, 0, 0);
-            // This is the heartbeat: it only asks for a new frame 
-            // AFTER the current one is finished drawing.
-            setTimeout(updateFrame, 33); // ~30 FPS is perfect for your MSI Thin 15[cite: 5]
+            // This is the heartbeat
+            setTimeout(updateFrame, 33); // Cleaned up!
         };
 
         img.onerror = function() {
-            log("Frame load failed. Retrying...");[cite: 6]
+            log("Frame load failed. Retrying..."); // Cleaned up!
             setTimeout(updateFrame, 1000);
         };
 
