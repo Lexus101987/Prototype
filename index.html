@@ -47,10 +47,18 @@
         function updateFrame() {
             if (!currentStreamUrl) return;
 
-            // We use a simple Image object again, but we will ensure the 
-            // server (your MSI) is ready to handle the request.
-            const timestamp = new Date().getTime();
-            img.src = currentStreamUrl + "?t=" + timestamp + "&preview=true"; 
+            // Use a unique cache-buster and the Pinggy bypass parameter
+            const streamSrc = currentStreamUrl + "?t=" + new Date().getTime();
+            
+            img.src = streamSrc;
+            
+            // Forced draw logic
+            if (img.complete || img.naturalWidth > 0) {
+                canvas.width = img.width;
+                canvas.height = img.height;
+                ctx.drawImage(img, 0, 0);
+            }
+            requestAnimationFrame(updateFrame);
         }
 
         img.onload = function() {
