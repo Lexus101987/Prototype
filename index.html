@@ -13,7 +13,7 @@
     </style>
 </head>
 <body>
-    <h3>SYSTEM MONITOR v1.1</h3>
+    <h3>SYSTEM MONITOR v1.0</h3>
     <div id="status">Waiting for handshake from the computer...</div>
     
     <canvas id="stream-canvas"></canvas>
@@ -44,10 +44,36 @@
         });
 
         // 2. The Frame-Fetcher (No-Queue Logic)
-        function updateFrame() {
+        async function updateFrame() {
             if (!currentStreamUrl) return;
-            // The timestamp (?t=) forces the browser to bypass any cache/queue
-            img.src = currentStreamUrl + "?t=" + new Date().getTime();
+
+            try {
+                // Fetch the image with the bypass header
+                const response = await fetch(currentStreamUrl + "?t=" + new Date().getTime(), {
+                    headers: {
+                        'x-pinggy-no-screen': 'true' // This skips the caution page!
+                    }
+                });
+
+                if (response.ok) {
+                    const blob = await response.blob();
+                    const objectURL = URL.createObjectURL(blob);
+                    
+                    img.onload = () => {
+                        canvas.width = img.width;
+                        canvas.height = img.height;
+                        ctx.drawImage(img, 0, 0);
+                        URL.revokeObjectURL(objectURL); // Clean up memory
+                        requestAnimationFrame(updateFrame);
+                    };
+                    img.src = objectURL;
+                } else {
+                    setTimeout(updateFrame, 100);
+                }
+            } catch (error) {
+                console.error("Stream error:", error);
+                setTimeout(updateFrame, 1000);
+            }
         }
 
         img.onload = function() {
