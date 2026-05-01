@@ -44,50 +44,25 @@
         });
 
         // 2. The Frame-Fetcher (No-Queue Logic)
-        async function updateFrame() {
+        function updateFrame() {
             if (!currentStreamUrl) return;
 
-            try {
-                // Fetch the image with the bypass header
-                const response = await fetch(currentStreamUrl + "?t=" + new Date().getTime(), {
-                    headers: {
-                        'x-pinggy-no-screen': 'true' // This skips the caution page!
-                    }
-                });
-
-                if (response.ok) {
-                    const blob = await response.blob();
-                    const objectURL = URL.createObjectURL(blob);
-                    
-                    img.onload = () => {
-                        canvas.width = img.width;
-                        canvas.height = img.height;
-                        ctx.drawImage(img, 0, 0);
-                        URL.revokeObjectURL(objectURL); // Clean up memory
-                        requestAnimationFrame(updateFrame);
-                    };
-                    img.src = objectURL;
-                } else {
-                    setTimeout(updateFrame, 100);
-                }
-            } catch (error) {
-                console.error("Stream error:", error);
-                setTimeout(updateFrame, 1000);
-            }
+            // We use a simple Image object again, but we will ensure the 
+            // server (your MSI) is ready to handle the request.
+            const timestamp = new Date().getTime();
+            img.src = currentStreamUrl + "?t=" + timestamp + "&preview=true"; 
         }
 
         img.onload = function() {
             canvas.width = img.width;
             canvas.height = img.height;
             ctx.drawImage(img, 0, 0);
-            // Immediately ask for the next frame to keep it 30FPS
-            requestAnimationFrame(updateFrame);
+            setTimeout(updateFrame, 33); // Aims for ~30 FPS
         };
 
         img.onerror = function() {
-            statusDiv.innerText = "Reconnecting to stream...";
-            statusDiv.style.color = "orange";
-            setTimeout(updateFrame, 1000); // Wait a second before retrying
+            console.log("Frame failed, retrying...");
+            setTimeout(updateFrame, 500);
         };
     </script>
 </body>
