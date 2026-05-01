@@ -13,7 +13,7 @@
     </style>
 </head>
 <body>
-    <h3>SYSTEM MONITOR v1.3</h3>
+    <h3>SYSTEM MONITOR v1.4</h3>
     <div id="status">Waiting for handshake from the computer...</div>
     
     <canvas id="stream-canvas"></canvas>
@@ -65,20 +65,22 @@
 
         function updateFrame() {
             if (!currentStreamUrl) return;
+            // Only update the source. The 'onload' event will handle the next one.
             img.src = currentStreamUrl + "?t=" + new Date().getTime();
         }
 
-        // 3. SET UP THE LISTENERS
         img.onload = function() {
             canvas.width = img.width;
             canvas.height = img.height;
             ctx.drawImage(img, 0, 0);
-            setTimeout(updateFrame, 33); 
+            // This is the heartbeat: it only asks for a new frame 
+            // AFTER the current one is finished drawing.
+            setTimeout(updateFrame, 33); // ~30 FPS is perfect for your MSI Thin 15[cite: 5]
         };
 
         img.onerror = function() {
-            // This confirms the browser is blocking the link
-            setTimeout(updateFrame, 500);
+            log("Frame load failed. Retrying...");[cite: 6]
+            setTimeout(updateFrame, 1000);
         };
 
         channel.subscribe('update', (message) => {
@@ -88,7 +90,7 @@
             statusDiv.style.color = "#00ff41";
             log("New Handshake Received");
             debugStream(); 
-            updateFrame();
+            updateFrame(); // Start the loop once[cite: 6]
         });
     </script>
 </body>
