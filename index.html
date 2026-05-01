@@ -63,33 +63,41 @@
             }
         }
 
-        function updateFrame() {
-            if (!currentStreamUrl) return;
-            // Only update the source. The 'onload' event will handle the next one.
-            img.src = currentStreamUrl + "?t=" + new Date().getTime();
+        async function updateFrame() {
+    if (!currentStreamUrl) return;
+
+    try {
+        // This is the 'API' method mentioned in your image
+        const response = await fetch(currentStreamUrl + "?t=" + new Date().getTime(), {
+            headers: {
+                'x-pinggy-no-screen': 'true' // The header from your image!
+            }
+        });
+
+        if (response.ok) {
+            const blob = await response.blob();
+            const url = URL.createObjectURL(blob);
+            img.src = url;
+            
+            // Clean up memory after the image loads
+            img.onload = () => {
+                ctx.drawImage(img, 0, 0);
+                URL.revokeObjectURL(url);
+                setTimeout(updateFrame, 33); // 30 FPS
+            };
         }
+    } catch (e) {
+        log("Connection error. Retrying...");
+        setTimeout(updateFrame, 1000);
+    }
+}
 
-        img.onload = function() {
-            canvas.width = img.width;
-            canvas.height = img.height;
-            ctx.drawImage(img, 0, 0);
-            // This is the heartbeat
-            setTimeout(updateFrame, 33); // Cleaned up!
-        };
-
-        img.onerror = function() {
-            log("Frame load failed. Retrying..."); // Cleaned up!
-            setTimeout(updateFrame, 1000);
-        };
-
-        channel.subscribe('update', (message) => {
-            let secureUrl = message.data.replace("http://", "https://");
-            currentStreamUrl = secureUrl + "/video_feed";
-            statusDiv.innerText = "CONNECTED: " + secureUrl;
-            statusDiv.style.color = "#00ff41";
-            log("New Handshake Received");
-            debugStream(); 
-            updateFrame(); // Start the loop once[cite: 6]
+        // 3. SETUP THE ABLY SUBSCRIPTION
+        channel.subscribe('update', message => {
+            log("Received new URL: " + message.data);
+            currentStreamUrl = message.data;
+            statusDiv.textContent = "Connected to: " + currentStreamUrl;
+            updateFrame(); // Start fetching frames immediately
         });
     </script>
 </body>
